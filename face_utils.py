@@ -5,7 +5,7 @@ import insightface
 import math
 import os
 
-# Constants from your notebook
+
 OUTPUT_SIZE = (112, 112)
 TARGET_LANDMARKS = np.array([
     [38.2946, 51.6963], [73.5318, 51.5014], [56.0252, 77.7346]
@@ -43,7 +43,6 @@ class FacePipeline:
 
         face_landmarks = results.multi_face_landmarks[0].landmark
 
-        # --- Your Alignment Logic ---
         left_eye_x = face_landmarks[EYE_LEFT_INNER].x
         right_eye_x = face_landmarks[EYE_RIGHT_INNER].x
         
