@@ -8,14 +8,13 @@ import os
 import logging
 from face_utils import FacePipeline
 import asyncio
+from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_PATH = "./data/face_database.npy"
 VERIFICATION_THRESHOLD = 0.5 
-
-app = FastAPI(title="Face Auth Microservice")
 
 pipeline = None
 face_db = {}
@@ -70,13 +69,19 @@ def decode_image(b64_string):
 
 # --- Lifespan Events ---
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global pipeline
+    logger.info("Starting up Face Auth Service...")
+    
+    os.makedirs("./data", exist_ok=True)  # Ensuring if the data directory exists, otherwise create it
+    
     pipeline = FacePipeline()
     load_db()
+    
+    yield
 
-    os.makedirs("./data", exist_ok=True)
+app = FastAPI(title="Face Auth Microservice", lifespan=lifespan)
 
 
 # --- API Endpoints ---
@@ -89,27 +94,27 @@ async def health_check():
         "model_loaded": pipeline is not None
     }
 
-# @app.post("/enroll")
-# async def enroll_user(request: EnrollRequest, background_tasks: BackgroundTasks):
-#     img = decode_image(request.image_b64)
-#     if img is None:
-#         raise HTTPException(status_code=400, detail="Invalid base64 image")
+@app.post("/enroll")
+async def enroll_user(request: EnrollRequest, background_tasks: BackgroundTasks):
+    img = decode_image(request.image_b64)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Invalid base64 image")
 
-#     try:
-#         embedding = pipeline.process_image(img)
-#         if embedding is None:
-#             raise HTTPException(status_code=400, detail="No face detected in image")
+    try:
+        embedding = pipeline.process_image(img)
+        if embedding is None:
+            raise HTTPException(status_code=400, detail="No face detected in image")
         
-#         async with db_lock:
-#             face_db[request.user_id] = embedding
-#             np.save(DATABASE_PATH, face_db)
-#         background_tasks.add_task(save_db)
+        async with db_lock:
+            face_db[request.user_id] = embedding
+            np.save(DATABASE_PATH, face_db)
+        background_tasks.add_task(save_db)
         
-#         return {"success": True, "message": f"User {request.user_id} enrolled successfully"}
+        return {"success": True, "message": f"User {request.user_id} enrolled successfully"}
     
-#     except Exception as e:
-#         logger.error(f"Enrollment failed: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Enrollment failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/verify")
 async def verify_user(request: VerifyRequest):
@@ -139,37 +144,33 @@ async def verify_user(request: VerifyRequest):
         logger.error(f"Verification error: {e}")
         raise HTTPException(status_code=500, detail="Processing error")
 
-@app.post("/identify")
-async def identify_user(request: IdentifyRequest):
-    img = decode_image(request.image_b64)
-    if img is None:
-        raise HTTPException(status_code=400, detail="Invalid base64 image")
+
+
+# @app.post("/identify")
+# async def identify_user(request: IdentifyRequest):
+#     img = decode_image(request.image_b64)
+#     if img is None:
+#         raise HTTPException(status_code=400, detail="Invalid base64 image")
+#     if not face_db:
+#         raise HTTPException(status_code=404, detail="Database is empty")
+#     try:
+#         live_embedding = pipeline.process_image(img)
+#         if live_embedding is None:
+#             raise HTTPException(status_code=400, detail="No face detected")
+
+#         best_score = -1.0
+#         best_user = "unknown"
+#         for user_id, stored_emb in face_db.items():
+#             score = pipeline.cosine_similarity(live_embedding, stored_emb)
+#             if score > best_score:
+#                 best_score = score
+#                 best_user = user_id
         
-    if not face_db:
-        raise HTTPException(status_code=404, detail="Database is empty")
+#         if best_score < request.threshold:
+#             best_user = "unknown"
 
-    try:
-        live_embedding = pipeline.process_image(img)
-        if live_embedding is None:
-            raise HTTPException(status_code=400, detail="No face detected")
+#         return {"user_id": best_user, "similarity": float(best_score)}
 
-        best_score = -1.0
-        best_user = "unknown"
-
-        for user_id, stored_emb in face_db.items():
-            score = pipeline.cosine_similarity(live_embedding, stored_emb)
-            if score > best_score:
-                best_score = score
-                best_user = user_id
-        
-        if best_score < request.threshold:
-            best_user = "unknown"
-
-        return {
-            "user_id": best_user,
-            "similarity": float(best_score)
-        }
-
-    except Exception as e:
-        logger.error(f"Identification error: {e}")
-        raise HTTPException(status_code=500, detail="Processing error")
+#     except Exception as e:
+#         logger.error(f"Identification error: {e}")
+#         raise HTTPException(status_code=500, detail="Processing error")

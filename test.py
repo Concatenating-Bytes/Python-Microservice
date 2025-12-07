@@ -6,7 +6,7 @@ import time
 
 # local configuration (changeable)
 API_URL = "http://127.0.0.1:8000"
-USER_ID = "test_user_01"
+USER_ID = "Sourasish fondles"
  
 def capture_image(prompt):
     cap = cv2.VideoCapture(0)
@@ -15,7 +15,7 @@ def capture_image(prompt):
         return None
 
     print(f"\n--- {prompt} ---")
-    print("Press 's' to save the photo, or 'q' to quit.")
+    print("Press *space-bar* to save the photo, or 'q' to quit.")
 
     captured_frame = None
 
@@ -26,7 +26,7 @@ def capture_image(prompt):
         cv2.imshow(f"{prompt} - Press 's'", frame)
         
         key = cv2.waitKey(1) & 0xFF
-        if key == ord('s'):
+        if key == ord(' '):
             captured_frame = frame
             print("Image captured!")
             break
@@ -43,7 +43,7 @@ def encode_image_to_base64(image):
     return f"data:image/jpeg;base64,{b64_string}"
 
 def test_enrollment():
-    img = capture_image("STEP 1: Take photo for ENROLLMENT")
+    img = capture_image("Take photo for ENROLLMENT")
     if img is None: return
 
     b64_img = encode_image_to_base64(img)
@@ -72,9 +72,9 @@ def test_verification():
         print("Response Body:", json.dumps(result, indent=2))
         
         if result.get("verified"):
-            print("\n✅ SUCCESS: User Verified!")
+            print("\nSUCCESS: User Verified!")
         else:
-            print("\n❌ FAILED: User NOT Verified (Low Similarity)")
+            print("\nFAILED: User NOT Verified (Low Similarity)")
             
     except Exception as e:
         print("Error:", e)
@@ -91,4 +91,3 @@ if __name__ == "__main__":
         
     except requests.exceptions.ConnectionError:
         print("❌ CRITICAL ERROR: Could not connect to server.")
-        print("Make sure you ran 'uvicorn app:app --reload' in a separate terminal!")
