@@ -7,6 +7,7 @@ import base64
 import os
 import logging
 from face_utils import FacePipeline
+import asyncio
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ app = FastAPI(title="Face Auth Microservice")
 
 pipeline = None
 face_db = {}
+db_lock = asyncio.Lock()
 
 # Input Schemas
 class EnrollRequest(BaseModel):
@@ -97,10 +99,9 @@ async def enroll_user(request: EnrollRequest, background_tasks: BackgroundTasks)
         if embedding is None:
             raise HTTPException(status_code=400, detail="No face detected in image")
         
-        # Save to memory
-        face_db[request.user_id] = embedding
-        
-        # Save to disk in background
+        async with db_lock:
+            face_db[request.user_id] = embedding
+            np.save(DATABASE_PATH, face_db)
         background_tasks.add_task(save_db)
         
         return {"success": True, "message": f"User {request.user_id} enrolled successfully"}

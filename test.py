@@ -18,7 +18,7 @@ def capture_image(prompt):
     print("Press 's' to save the photo, or 'q' to quit.")
 
     captured_frame = None
-    
+
     while True:
         ret, frame = cap.read()
         if not ret: break
