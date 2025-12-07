@@ -4,7 +4,7 @@ import requests
 import json
 import time
 
-# Configuration
+# local configuration (changeable)
 API_URL = "http://127.0.0.1:8000"
 USER_ID = "test_user_01"
  

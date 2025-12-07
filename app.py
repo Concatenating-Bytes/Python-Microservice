@@ -50,13 +50,12 @@ def load_db():
         face_db = {}
 
 def save_db():
-    # Save asynchronously to avoid blocking
     np.save(DATABASE_PATH, face_db)
     logger.info("Database saved to disk.")
 
 def decode_image(b64_string):
     try:
-        # Remove header if present (e.g., "data:image/jpeg;base64,")
+        # Remove header if available (e.g., "data:image/jpeg;base64,")
         if "," in b64_string:
             b64_string = b64_string.split(",")[1]
         
@@ -68,6 +67,7 @@ def decode_image(b64_string):
         logger.error(f"Image decode error: {e}")
         return None
 
+
 # --- Lifespan Events ---
 
 @app.on_event("startup")
@@ -76,7 +76,8 @@ async def startup_event():
     pipeline = FacePipeline()
     load_db()
 
-    os.makedirs("./data", exist_ok=True)  # Create data directory if not exists
+    os.makedirs("./data", exist_ok=True)
+
 
 # --- API Endpoints ---
 
@@ -88,27 +89,27 @@ async def health_check():
         "model_loaded": pipeline is not None
     }
 
-@app.post("/enroll")
-async def enroll_user(request: EnrollRequest, background_tasks: BackgroundTasks):
-    img = decode_image(request.image_b64)
-    if img is None:
-        raise HTTPException(status_code=400, detail="Invalid base64 image")
+# @app.post("/enroll")
+# async def enroll_user(request: EnrollRequest, background_tasks: BackgroundTasks):
+#     img = decode_image(request.image_b64)
+#     if img is None:
+#         raise HTTPException(status_code=400, detail="Invalid base64 image")
 
-    try:
-        embedding = pipeline.process_image(img)
-        if embedding is None:
-            raise HTTPException(status_code=400, detail="No face detected in image")
+#     try:
+#         embedding = pipeline.process_image(img)
+#         if embedding is None:
+#             raise HTTPException(status_code=400, detail="No face detected in image")
         
-        async with db_lock:
-            face_db[request.user_id] = embedding
-            np.save(DATABASE_PATH, face_db)
-        background_tasks.add_task(save_db)
+#         async with db_lock:
+#             face_db[request.user_id] = embedding
+#             np.save(DATABASE_PATH, face_db)
+#         background_tasks.add_task(save_db)
         
-        return {"success": True, "message": f"User {request.user_id} enrolled successfully"}
+#         return {"success": True, "message": f"User {request.user_id} enrolled successfully"}
     
-    except Exception as e:
-        logger.error(f"Enrollment failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         logger.error(f"Enrollment failed: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/verify")
 async def verify_user(request: VerifyRequest):

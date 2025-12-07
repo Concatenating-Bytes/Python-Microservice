@@ -7,9 +7,7 @@ import os
 
 
 OUTPUT_SIZE = (112, 112)
-TARGET_LANDMARKS = np.array([
-    [38.2946, 51.6963], [73.5318, 51.5014], [56.0252, 77.7346]
-], dtype=np.float32)
+TARGET_LANDMARKS = np.array([[38.2946, 51.6963], [73.5318, 51.5014], [56.0252, 77.7346]], dtype=np.float32)
 EYE_LEFT_INNER = 362
 EYE_RIGHT_INNER = 133
 
